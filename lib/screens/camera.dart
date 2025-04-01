@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:scanprice/models/product.dart';
 import 'package:scanprice/service/api_service.dart';
 import 'package:image/image.dart' as img;
@@ -16,13 +17,12 @@ class CameraScreen extends StatefulWidget {
 
 class _CameraScreenState extends State<CameraScreen> {
   bool _isLoading = false;
-  List<ProductInfo> _products = [];
 
   late CameraController _cameraController;
   late List<CameraDescription> _cameras;
   bool isCameraReady = false;
 
-  bool _isPortraitOverlay = true;
+  bool _isPortraitOverlay = false;
 
   @override
   void initState() {
@@ -79,6 +79,13 @@ class _CameraScreenState extends State<CameraScreen> {
     return croppedFile;
   }
 
+  Future<String> _saveImageToLocal(File image) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final path = '${dir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final newFile = await image.copy(path);
+    return newFile.path;
+  }
+
   Future<void> _captureAndAnalyze() async {
     if (!_cameraController.value.isInitialized) return;
 
@@ -87,7 +94,6 @@ class _CameraScreenState extends State<CameraScreen> {
 
     setState(() {
       _isLoading = true;
-      _products.clear();
     });
 
     try {
@@ -98,10 +104,10 @@ class _CameraScreenState extends State<CameraScreen> {
 
       // Validacija ključeva
       if (decoded.containsKey('title') && decoded.containsKey('price') && decoded.containsKey('price_discount') && decoded.containsKey('card')) {
-        final product = ProductInfo.fromJson(decoded);
-        setState(() {
-          _products = [product];
-        });
+        final savedImagePath = await _saveImageToLocal(file);
+        final product = ProductInfo.fromJson(decoded).copyWith(imagePath: savedImagePath);
+        final box = Hive.box<ProductInfo>('cart');
+        box.add(product);
       } else {
         _showError("AI nije prepoznao sve potrebne podatke.");
       }
@@ -116,6 +122,27 @@ class _CameraScreenState extends State<CameraScreen> {
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: Colors.red));
+  }
+
+  void _showImagePreview(BuildContext context, File imageFile) {
+    showDialog(
+      context: context,
+      builder:
+          (_) => Dialog(
+            backgroundColor: Colors.black,
+            insetPadding: EdgeInsets.zero,
+            child: Stack(
+              children: [
+                InteractiveViewer(child: Image.file(imageFile)),
+                Positioned(
+                  top: 24,
+                  right: 24,
+                  child: IconButton(icon: const Icon(Icons.close, color: Colors.white, size: 30), onPressed: () => Navigator.of(context).pop()),
+                ),
+              ],
+            ),
+          ),
+    );
   }
 
   @override
@@ -176,44 +203,86 @@ class _CameraScreenState extends State<CameraScreen> {
 
           // Lista proizvoda ili "ponovi pokušaj"
           Expanded(
-            child:
-                _products.isNotEmpty
-                    ? ListView.builder(
-                      itemCount: _products.length,
-                      itemBuilder: (context, index) {
-                        final p = _products[index];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          elevation: 4,
-                          child: ListTile(
-                            title: Text(p.title),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text("Cijena: ${p.price.toStringAsFixed(2)} €"),
-                                Text("Akcijska: ${p.priceDiscount.toStringAsFixed(2)} €"),
-                                Text("Kartica: ${p.card ? 'DA' : 'NE'}"),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    )
-                    : !_isLoading
-                    ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text("Nema podataka."),
-                          const SizedBox(height: 10),
-                          ElevatedButton.icon(onPressed: _captureAndAnalyze, icon: const Icon(Icons.refresh), label: const Text("Pokušaj ponovno")),
-                        ],
+            child: ValueListenableBuilder(
+              valueListenable: Hive.box<ProductInfo>('cart').listenable(),
+              builder: (context, Box<ProductInfo> box, _) {
+                if (_isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (box.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text("Nema skeniranih proizvoda."),
+                        const SizedBox(height: 10),
+                        ElevatedButton.icon(onPressed: _captureAndAnalyze, icon: const Icon(Icons.refresh), label: const Text("Pokušaj ponovno")),
+                      ],
+                    ),
+                  );
+                }
+
+                final products = box.values.toList();
+
+                return ListView.builder(
+                  itemCount: products.length,
+                  itemBuilder: (context, index) {
+                    final p = products[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 4,
+                      child: ListTile(
+                        leading:
+                            p.imagePath != null
+                                ? GestureDetector(
+                                  onTap: () => _showImagePreview(context, File(p.imagePath!)),
+                                  child: Image.file(File(p.imagePath!), width: 50, height: 50, fit: BoxFit.cover),
+                                )
+                                : null,
+                        title: Text(p.title),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Cijena: ${p.price.toStringAsFixed(2)} €"),
+                            Text("Akcijska: ${p.priceDiscount.toStringAsFixed(2)} €"),
+                            Text("Kartica: ${p.card ? 'DA' : 'NE'}"),
+                          ],
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () {
+                            box.deleteAt(index);
+                          },
+                        ),
                       ),
-                    )
-                    : const SizedBox.shrink(),
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ],
+      ),
+      bottomNavigationBar: ValueListenableBuilder(
+        valueListenable: Hive.box<ProductInfo>('cart').listenable(),
+        builder: (context, Box<ProductInfo> box, _) {
+          final products = box.values.toList();
+          final total = products.fold<double>(0.0, (sum, item) => sum + (item.priceDiscount > 0 ? item.priceDiscount : item.price));
+
+          return Container(
+            color: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Ukupno:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text('${total.toStringAsFixed(2)} €', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
