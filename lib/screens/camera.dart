@@ -194,22 +194,13 @@ class _CameraScreenState extends State<CameraScreen> {
 
           const SizedBox(height: 10),
 
-          // Gumb za slikanje ili loader
-          _isLoading
-              ? const Padding(padding: EdgeInsets.all(16.0), child: CircularProgressIndicator())
-              : ElevatedButton.icon(onPressed: _captureAndAnalyze, icon: const Icon(Icons.camera_alt), label: const Text("Slikaj i analiziraj")),
-
-          const SizedBox(height: 10),
+          if (_isLoading) const CircularProgressIndicator(),
 
           // Lista proizvoda ili "ponovi pokušaj"
           Expanded(
             child: ValueListenableBuilder(
               valueListenable: Hive.box<ProductInfo>('cart').listenable(),
               builder: (context, Box<ProductInfo> box, _) {
-                if (_isLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
                 if (box.isEmpty) {
                   return Center(
                     child: Column(
@@ -223,10 +214,11 @@ class _CameraScreenState extends State<CameraScreen> {
                   );
                 }
 
-                final products = box.values.toList();
+                final products = box.values.toList().reversed.toList();
 
                 return ListView.builder(
                   itemCount: products.length,
+                  padding: const EdgeInsets.only(bottom: 100),
                   itemBuilder: (context, index) {
                     final p = products[index];
                     return Card(
@@ -265,6 +257,21 @@ class _CameraScreenState extends State<CameraScreen> {
           ),
         ],
       ),
+      floatingActionButton:
+          _isLoading
+              ? SizedBox()
+              : ElevatedButton.icon(
+                onPressed: _captureAndAnalyze,
+                icon: const Icon(Icons.camera_alt),
+                label: const Text("Slikaj"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                  iconColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+                ),
+              ),
       bottomNavigationBar: ValueListenableBuilder(
         valueListenable: Hive.box<ProductInfo>('cart').listenable(),
         builder: (context, Box<ProductInfo> box, _) {

@@ -11,17 +11,19 @@ class CartPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('Tvoja košarica', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          ...products.map(
-            (p) => ListTile(title: Text(p.title), subtitle: Text('${(p.priceDiscount > 0 ? p.priceDiscount : p.price).toStringAsFixed(2)} €')),
-          ),
-          const Divider(),
-          Text('Ukupno: ${total.toStringAsFixed(2)} €', style: const TextStyle(fontWeight: FontWeight.bold)),
-        ],
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Tvoja košarica', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            ...products.map(
+              (p) => ListTile(title: Text(p.title), subtitle: Text('${(p.priceDiscount > 0 ? p.priceDiscount : p.price).toStringAsFixed(2)} €')),
+            ),
+            const Divider(),
+            Text('Ukupno: ${total.toStringAsFixed(2)} €', style: const TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
       ),
     );
   }
