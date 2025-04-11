@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class GeminiAIService {
-  final String _apiKey = 'AIzaSyAJQoaNpZ7uhBvv0wq8HKaT3yV_-Gw5c2g';
+  final String _apiKey = 'bla';
 
   Future<String> sendImage(File imageFile) async {
     final url = Uri.parse('https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=$_apiKey');
