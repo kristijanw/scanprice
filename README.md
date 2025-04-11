@@ -1,16 +1,26 @@
-# scanprice
+# SkeniKošarica
 
-A new Flutter project.
+Aplikacija koja korisnicima omogućuje da **skeniranjem proizvoda direktno s etiketa u trgovini** automatski dobiju naziv, cijenu i dodatne informacije — uz pregled ukupne potrošnje.
 
-## Getting Started
+## Screenshot
 
-This project is a starting point for a Flutter application.
+<img src="app.jpg" alt="App Screenshot" width="300"/>
 
-A few resources to get you started if this is your first Flutter project:
+## Funkcionalnosti
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- Skeniranje etiketa s polica pomoću kamere
+- Prepoznavanje:
+  - Naziva proizvoda
+  - Cijene po komadu ili težini
+  - Akcijske cijene (ako postoji)
+  - Potrebe za karticom za pogodnosti
+- Unos količine nakon skeniranja
+- Prikaz svih proizvoda u listi
+- Brisanje pojedinačnih stavki ili svih odjednom
+- Izračun ukupne vrijednosti proizvoda u košarici
+- Lokalna pohrana podataka putem Hive
+- Intuitivno korisničko sučelje
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Tehnologije
+
+- **Flutter**
