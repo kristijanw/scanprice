@@ -32,7 +32,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
   Future<void> _initCamera() async {
     _cameras = await availableCameras();
-    _cameraController = CameraController(_cameras.first, ResolutionPreset.medium);
+    _cameraController = CameraController(_cameras.first, ResolutionPreset.high);
     await _cameraController.initialize();
     setState(() => isCameraReady = true);
   }
@@ -107,9 +107,17 @@ class _CameraScreenState extends State<CameraScreen> {
         final savedImagePath = await _saveImageToLocal(file);
         final product = ProductInfo.fromJson(decoded).copyWith(imagePath: savedImagePath);
         final box = Hive.box<ProductInfo>('cart');
-        box.add(product);
+
+        // ignore: use_build_context_synchronously
+        final quantity = await _showQuantityInputDialog(context);
+
+        if (quantity != null && quantity > 0) {
+          for (int i = 0; i < quantity; i++) {
+            box.add(product);
+          }
+        }
       } else {
-        _showError("AI nije prepoznao sve potrebne podatke.");
+        _showError("Scan nije prepoznao sve potrebne podatke.");
       }
     } catch (e) {
       _showError("Greška pri analizi slike.");
@@ -118,6 +126,39 @@ class _CameraScreenState extends State<CameraScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  Future<int?> _showQuantityInputDialog(BuildContext context) async {
+    final TextEditingController controller = TextEditingController();
+
+    return await showDialog<int>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Unesi količinu"),
+          content: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(hintText: "Npr. 1, 2, 3..."),
+          ),
+          actions: [
+            TextButton(child: const Text("Odustani"), onPressed: () => Navigator.of(context).pop(null)),
+            TextButton(
+              child: const Text("Dodaj"),
+              onPressed: () {
+                final input = int.tryParse(controller.text);
+                if (input != null && input > 0) {
+                  Navigator.of(context).pop(input);
+                } else {
+                  // Ako unese nešto nevalidno, ostaje u dialogu
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Unesi ispravan broj!")));
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showError(String message) {
@@ -158,8 +199,9 @@ class _CameraScreenState extends State<CameraScreen> {
       body: Column(
         children: [
           // Kamera prikaz
-          AspectRatio(
-            aspectRatio: isCameraReady ? _cameraController.value.aspectRatio : 1.0,
+          SizedBox(
+            // aspectRatio: isCameraReady ? _cameraController.value.aspectRatio : 1.0,
+            height: 300,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -207,45 +249,74 @@ class _CameraScreenState extends State<CameraScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Text("Nema skeniranih proizvoda."),
-                        const SizedBox(height: 10),
-                        ElevatedButton.icon(onPressed: _captureAndAnalyze, icon: const Icon(Icons.refresh), label: const Text("Pokušaj ponovno")),
+                        const Text(
+                          "Prije skeniranja proizvoda, pozicionirajte kameru prema deklaraciji i neka bude unutar zelenog okvira!!",
+                          textAlign: TextAlign.center,
+                        ),
                       ],
                     ),
                   );
                 }
 
-                final products = box.values.toList().reversed.toList();
-
                 return ListView.builder(
-                  itemCount: products.length,
+                  itemCount: box.length,
                   padding: const EdgeInsets.only(bottom: 100),
                   itemBuilder: (context, index) {
-                    final p = products[index];
+                    final reverseIndex = box.length - 1 - index;
+                    final key = box.keyAt(reverseIndex);
+                    final items = box.get(key);
+
                     return Card(
                       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       elevation: 4,
                       child: ListTile(
                         leading:
-                            p.imagePath != null
+                            items!.imagePath != null
                                 ? GestureDetector(
-                                  onTap: () => _showImagePreview(context, File(p.imagePath!)),
-                                  child: Image.file(File(p.imagePath!), width: 50, height: 50, fit: BoxFit.cover),
+                                  onTap: () => _showImagePreview(context, File(items.imagePath!)),
+                                  child: Image.file(File(items.imagePath!), width: 50, height: 50, fit: BoxFit.cover),
                                 )
                                 : null,
-                        title: Text(p.title),
+                        title: Text(items.title),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Cijena: ${p.price.toStringAsFixed(2)} €"),
-                            Text("Akcijska: ${p.priceDiscount.toStringAsFixed(2)} €"),
-                            Text("Kartica: ${p.card ? 'DA' : 'NE'}"),
+                            Text("Cijena: ${items.price.toStringAsFixed(2)} €"),
+                            Text("Akcijska: ${items.priceDiscount.toStringAsFixed(2)} €"),
+                            Text("Kartica: ${items.card ? 'DA' : 'NE'}"),
                           ],
                         ),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () {
-                            box.deleteAt(index);
+                          onPressed: () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  title: const Text('Potvrdi brisanje'),
+                                  content: const Text('Jesi li siguran da želiš obrisati ovaj proizvod?'),
+                                  actions: <Widget>[
+                                    TextButton(
+                                      child: const Text('Odustani'),
+                                      onPressed: () {
+                                        Navigator.of(context).pop(false);
+                                      },
+                                    ),
+                                    TextButton(
+                                      child: const Text('Obriši', style: TextStyle(color: Colors.red)),
+                                      onPressed: () {
+                                        Navigator.of(context).pop(true);
+                                      },
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+
+                            if (confirm == true) {
+                              Hive.box<ProductInfo>('cart').delete(key);
+                            }
                           },
                         ),
                       ),
@@ -260,17 +331,56 @@ class _CameraScreenState extends State<CameraScreen> {
       floatingActionButton:
           _isLoading
               ? SizedBox()
-              : ElevatedButton.icon(
-                onPressed: _captureAndAnalyze,
-                icon: const Icon(Icons.camera_alt),
-                label: const Text("Slikaj"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
-                  foregroundColor: Colors.white,
-                  iconColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
-                ),
+              : Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _captureAndAnalyze,
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text("Slikaj"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      foregroundColor: Colors.white,
+                      iconColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: const Text('Obriši sve'),
+                            content: const Text('Jesi li siguran da želiš obrisati sve proizvode iz liste?'),
+                            actions: <Widget>[
+                              TextButton(child: const Text('Odustani'), onPressed: () => Navigator.of(context).pop(false)),
+                              TextButton(
+                                child: const Text('Obriši sve', style: TextStyle(color: Colors.red)),
+                                onPressed: () => Navigator.of(context).pop(true),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+
+                      if (confirm == true) {
+                        Hive.box<ProductInfo>('cart').clear();
+                      }
+                    },
+                    icon: const Icon(Icons.delete_forever),
+                    label: const Text("Obriši sve"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      foregroundColor: Colors.white,
+                      iconColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+                    ),
+                  ),
+                ],
               ),
       bottomNavigationBar: ValueListenableBuilder(
         valueListenable: Hive.box<ProductInfo>('cart').listenable(),

@@ -9,26 +9,25 @@ class GeminiAIService {
     final url = Uri.parse('https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=$_apiKey');
 
     final prompt = '''
-Pregledaj sliku i izvuci mi sljedeće podatke:
+Analyze the image and extract the following information:
 
-Naziv proizvoda,
-Cijenu proizvoda,
-Akcijsku cijenu ako postoji,
-Provjeru je li potrebna kartica za pogodnosti.
+- Product name
+- Final price (total amount the customer pays)
+- Discounted price, if available
+- Whether a loyalty card is required for the discount
 
-Sve te informacije mi vrati u JSON formatu bez dodatnog teksta, objašnjenja i bez markdown oznaka kao što su ```.
+Return the information in **pure JSON format** only — no additional explanations, no text, and no markdown formatting like triple backticks.
 
-Očekivana JSON struktura:
+Expected JSON structure:
 
 {
-  "title": "Naziv proizvoda",
+  "title": "Product name",
   "price": 0.0,
   "price_discount": 0.0,
   "card": false
 }
 ''';
 
-    // Pretvaranje slike u base64
     final bytes = await imageFile.readAsBytes();
     final base64Image = base64Encode(bytes);
 
@@ -38,10 +37,7 @@ Očekivana JSON struktura:
           "parts": [
             {"text": prompt},
             {
-              "inlineData": {
-                "mimeType": "image/jpeg", // ili image/png ako je PNG
-                "data": base64Image,
-              },
+              "inlineData": {"mimeType": "image/jpeg", "data": base64Image},
             },
           ],
         },
@@ -59,9 +55,6 @@ Očekivana JSON struktura:
         final content = candidates?.first['content'];
         final parts = content['parts'] as List?;
         final text = parts?.first['text'];
-
-        print(text);
-
         return text ?? 'No content in response';
       } else {
         throw Exception('Failed: ${response.statusCode} - ${response.body}');
