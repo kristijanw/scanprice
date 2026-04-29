@@ -3,30 +3,30 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class GeminiAIService {
-  final String _apiKey = 'bla';
+  final String _apiKey = 'AIzaSyDWbm_94hPuUY798yrLJHlXJRRQhaD6zeY';
 
   Future<String> sendImage(File imageFile) async {
-    final url = Uri.parse('https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=$_apiKey');
+    final url = Uri.parse(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=$_apiKey',
+    );
 
-    final prompt = '''
-Analyze the image and extract the following information:
+    const prompt =
+        '''Look at this product price tag and extract the following information.
+Return ONLY a valid JSON object, nothing else, no explanation.
 
-- Product name
-- Final price (total amount the customer pays)
-- Discounted price, if available
-- Whether a loyalty card is required for the discount
-
-Return the information in **pure JSON format** only — no additional explanations, no text, and no markdown formatting like triple backticks.
-
-Expected JSON structure:
-
+Format:
 {
-  "title": "Product name",
-  "price": 0.0,
-  "price_discount": 0.0,
+  "title": "product name and size",
+  "price": 0.00,
+  "price_discount": null,
   "card": false
 }
-''';
+
+Rules:
+- title: product name with size/weight
+- price: regular price as number
+- price_discount: discounted price as number, or null if none
+- card: true if there is a loyalty card price, false if not''';
 
     final bytes = await imageFile.readAsBytes();
     final base64Image = base64Encode(bytes);
@@ -37,25 +37,26 @@ Expected JSON structure:
           "parts": [
             {"text": prompt},
             {
-              "inlineData": {"mimeType": "image/jpeg", "data": base64Image},
+              "inline_data": {"mime_type": "image/jpeg", "data": base64Image},
             },
           ],
         },
       ],
     });
 
-    final headers = {'Content-Type': 'application/json'};
-
     try {
-      final response = await http.post(url, headers: headers, body: body);
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        // Pristupi odgovoru ovisno o strukturi
-        final candidates = data['candidates'] as List?;
-        final content = candidates?.first['content'];
-        final parts = content['parts'] as List?;
-        final text = parts?.first['text'];
-        return text ?? 'No content in response';
+        final text =
+            data['candidates'][0]['content']['parts'][0]['text'] as String;
+        final match = RegExp(r'\{.*\}', dotAll: true).firstMatch(text.trim());
+        if (match != null) return match.group(0)!;
+        throw Exception('Could not parse JSON from response');
       } else {
         throw Exception('Failed: ${response.statusCode} - ${response.body}');
       }

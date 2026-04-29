@@ -25,7 +25,7 @@ class ProductInfo {
     return ProductInfo(
       title: json['title'],
       price: (json['price'] as num).toDouble(),
-      priceDiscount: (json['price_discount'] as num).toDouble(),
+      priceDiscount: (json['price_discount'] as num?)?.toDouble() ?? 0.0,
       card: json['card'] as bool,
     );
   }

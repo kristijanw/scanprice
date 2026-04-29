@@ -18,9 +18,8 @@ class AnimatedCartCardState extends State<AnimatedCartCard> with SingleTickerPro
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))..repeat(reverse: true);
-
-    _pulse = Tween<double>(begin: 1.0, end: 1.05).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000))..repeat(reverse: true);
+    _pulse = Tween<double>(begin: 1.0, end: 1.015).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -35,21 +34,49 @@ class AnimatedCartCardState extends State<AnimatedCartCard> with SingleTickerPro
       scale: _pulse,
       child: GestureDetector(
         onTap: widget.onTap,
-        child: Card(
-          margin: const EdgeInsets.only(top: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          elevation: 6,
-          color: Colors.deepPurple.shade100,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.shopping_cart, color: Colors.deepPurple),
-                const SizedBox(width: 10),
-                Text('${widget.itemCount} proizvoda • ${widget.total.toStringAsFixed(2)} €', style: const TextStyle(fontWeight: FontWeight.w600)),
-              ],
-            ),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 16, offset: const Offset(0, 4))],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6366F1).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF6366F1), size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Košarica', style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+                    Text(
+                      '${widget.itemCount} ${widget.itemCount == 1 ? 'proizvod' : 'proizvoda'}',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E)),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6366F1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text('${widget.total.toStringAsFixed(2)} €', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+              ),
+              const SizedBox(width: 6),
+              Icon(Icons.chevron_right, color: Colors.grey[400]),
+            ],
           ),
         ),
       ),
