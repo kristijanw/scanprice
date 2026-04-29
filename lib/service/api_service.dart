@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class GeminiAIService {
-  final String _apiKey = 'AIzaSyDWbm_94hPuUY798yrLJHlXJRRQhaD6zeY';
+  static const String _apiKey = String.fromEnvironment('GEMINI_API_KEY');
 
   Future<String> sendImage(File imageFile) async {
     final url = Uri.parse(
