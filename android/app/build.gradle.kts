@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.scanprice"
+    namespace = "hr.liait.scanprice"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -19,7 +19,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.scanprice"
+        applicationId = "hr.liait.scanprice"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
