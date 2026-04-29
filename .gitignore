@@ -1,3 +1,7 @@
+# Keystore
+*.jks
+*.b64
+
 # Miscellaneous
 *.class
 *.log
