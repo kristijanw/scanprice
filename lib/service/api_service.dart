@@ -2,13 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 
-class GeminiAIService {
-  static const String _apiKey = String.fromEnvironment('GEMINI_API_KEY');
+class OpenAIService {
+  static const String _apiKey = String.fromEnvironment('OPENAI_API_KEY');
+  static const String _model = 'gpt-4o-mini';
 
   Future<String> sendImage(File imageFile) async {
-    final url = Uri.parse(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=$_apiKey',
-    );
+    final url = Uri.parse('https://api.openai.com/v1/chat/completions');
 
     const prompt =
         '''Look at this product price tag and extract the following information.
@@ -32,12 +31,16 @@ Rules:
     final base64Image = base64Encode(bytes);
 
     final body = jsonEncode({
-      "contents": [
+      "model": _model,
+      "response_format": {"type": "json_object"},
+      "messages": [
         {
-          "parts": [
-            {"text": prompt},
+          "role": "user",
+          "content": [
+            {"type": "text", "text": prompt},
             {
-              "inline_data": {"mime_type": "image/jpeg", "data": base64Image},
+              "type": "image_url",
+              "image_url": {"url": "data:image/jpeg;base64,$base64Image"},
             },
           ],
         },
@@ -47,13 +50,15 @@ Rules:
     try {
       final response = await http.post(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_apiKey',
+        },
         body: body,
       );
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final text =
-            data['candidates'][0]['content']['parts'][0]['text'] as String;
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        final text = data['choices'][0]['message']['content'] as String;
         final match = RegExp(r'\{.*\}', dotAll: true).firstMatch(text.trim());
         if (match != null) return match.group(0)!;
         throw Exception('Could not parse JSON from response');

@@ -52,10 +52,21 @@ class _CameraScreenState extends State<CameraScreen> {
     int cropHeight = (imageHeight * cropSize.height / 300).toInt().clamp(0, imageHeight);
     final left = (centerX - cropWidth ~/ 2).clamp(0, imageWidth - cropWidth);
     final top = (centerY - cropHeight ~/ 2).clamp(0, imageHeight - cropHeight);
-    final cropped = img.copyCrop(originalImage, x: left, y: top, width: cropWidth, height: cropHeight);
+    var cropped = img.copyCrop(originalImage, x: left, y: top, width: cropWidth, height: cropHeight);
+    // Downscale so the longest side is at most 1000px (still readable for OCR)
+    // to keep the upload small and reduce vision token cost.
+    const maxSide = 1000;
+    if (cropped.width > maxSide || cropped.height > maxSide) {
+      if (cropped.width >= cropped.height) {
+        cropped = img.copyResize(cropped, width: maxSide);
+      } else {
+        cropped = img.copyResize(cropped, height: maxSide);
+      }
+    }
     final tempDir = await getTemporaryDirectory();
     final croppedFile = File('${tempDir.path}/cropped.jpg');
-    await croppedFile.writeAsBytes(img.encodeJpg(cropped));
+    // quality: 80 compresses well with no visible loss on a price tag.
+    await croppedFile.writeAsBytes(img.encodeJpg(cropped, quality: 80));
     return croppedFile;
   }
 
@@ -71,7 +82,7 @@ class _CameraScreenState extends State<CameraScreen> {
     final file = await _cropImage(File(image.path), _isPortraitOverlay);
     setState(() => _isLoading = true);
     try {
-      final raw = await GeminiAIService().sendImage(file);
+      final raw = await OpenAIService().sendImage(file);
       final Map<String, dynamic> decoded = jsonDecode(raw);
       if (decoded.containsKey('title') && decoded.containsKey('price') && decoded.containsKey('price_discount') && decoded.containsKey('card')) {
         final savedImagePath = await _saveImageToLocal(file);
