@@ -3,7 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:scanprice/models/product.dart';
-import 'package:scanprice/screens/home.dart';
+import 'package:scanprice/models/purchase.dart';
+import 'package:scanprice/screens/main_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,7 +15,9 @@ void main() async {
   final dir = await getApplicationDocumentsDirectory();
   Hive.init(dir.path);
   Hive.registerAdapter(ProductInfoAdapter());
+  Hive.registerAdapter(PurchaseAdapter());
   await Hive.openBox<ProductInfo>('cart');
+  await Hive.openBox<Purchase>('history');
 
   runApp(const MyApp());
 }
@@ -31,7 +34,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6366F1)),
       ),
-      home: const HomeScreen(),
+      home: const MainShell(),
     );
   }
 }

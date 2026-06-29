@@ -86,7 +86,7 @@ class HomeScreen extends StatelessWidget {
                 builder: (context, Box<ProductInfo> box, _) {
                   if (box.isEmpty) return const SizedBox.shrink();
                   final products = box.values.toList();
-                  final total = products.fold<double>(0.0, (sum, item) => sum + (item.priceDiscount > 0 ? item.priceDiscount : item.price));
+                  final total = products.fold<double>(0.0, (sum, item) => sum + item.lineTotal);
                   return AnimatedCartCard(
                     itemCount: products.length,
                     total: total,

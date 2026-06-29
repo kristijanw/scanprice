@@ -1,47 +1,41 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'product.dart';
+part of 'purchase.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
 // **************************************************************************
 
-class ProductInfoAdapter extends TypeAdapter<ProductInfo> {
+class PurchaseAdapter extends TypeAdapter<Purchase> {
   @override
-  final int typeId = 0;
+  final int typeId = 1;
 
   @override
-  ProductInfo read(BinaryReader reader) {
+  Purchase read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return ProductInfo(
-      title: fields[0] as String,
-      price: fields[1] as double,
-      priceDiscount: fields[2] as double,
-      card: fields[3] as bool,
-      imagePath: fields[4] as String?,
-      quantity: fields[5] as int? ?? 1,
+    return Purchase(
+      date: fields[0] as DateTime,
+      store: fields[1] as String,
+      products: (fields[2] as List).cast<ProductInfo>(),
+      total: fields[3] as double,
     );
   }
 
   @override
-  void write(BinaryWriter writer, ProductInfo obj) {
+  void write(BinaryWriter writer, Purchase obj) {
     writer
-      ..writeByte(6)
-      ..writeByte(0)
-      ..write(obj.title)
-      ..writeByte(1)
-      ..write(obj.price)
-      ..writeByte(2)
-      ..write(obj.priceDiscount)
-      ..writeByte(3)
-      ..write(obj.card)
       ..writeByte(4)
-      ..write(obj.imagePath)
-      ..writeByte(5)
-      ..write(obj.quantity);
+      ..writeByte(0)
+      ..write(obj.date)
+      ..writeByte(1)
+      ..write(obj.store)
+      ..writeByte(2)
+      ..write(obj.products)
+      ..writeByte(3)
+      ..write(obj.total);
   }
 
   @override
@@ -50,7 +44,7 @@ class ProductInfoAdapter extends TypeAdapter<ProductInfo> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is ProductInfoAdapter &&
+      other is PurchaseAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
